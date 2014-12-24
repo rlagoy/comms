@@ -8,13 +8,21 @@ import threading
 import time
 import math
 
-variable=1
+
+# Constants
 threadLock=threading.Lock()
 sampleBuffer=[]
 timeVector=[]
 startTime=0
 elapsedTime=0
+sampleRate=2.4e6
+centerFreq=901e6
+gain=10
+numSamples=256*256
+elapsedTime=1
+numSweeps=int(math.ceil(numSamples/sampleRate))
 
+# Thread that will do the demodulations
 class demodulation (threading.Thread):
     def __init__(self, threadID, samples):
         threading.Thread.__init__(self)
@@ -31,6 +39,7 @@ class demodulation (threading.Thread):
         print "Processing, Start: " + repr(procTimeStart) + " Duration: " + repr(time.clock()-procTimeStart)
         
 
+# Thread that recieves samples from the ADC
 
 class sdrRetriever (threading.Thread):
     def __init__(self, threadID, sampleRate, centerFreq, gain, numSamples, numSweeps):
@@ -67,6 +76,7 @@ class sdrRetriever (threading.Thread):
         
         print "Exiting sdrRetriever"
 
+# Sets up the SDR
 def configureSDR(sampleRate, centerFreq, gain, numSamples):
     global sdr
     sdr = RtlSdr()
@@ -83,13 +93,7 @@ def configureSDR(sampleRate, centerFreq, gain, numSamples):
 
 def main():
 
-    sampleRate=2.4e6
-    centerFreq=901e6
-    gain=10
-    numSamples=256*256
-    elapsedTime=1
-    numSweeps=5 #int(math.ceil(numSamples/sampleRate))
-
+    # Start the timer
     startTime=time.clock()
 
     # Create new threads
@@ -98,8 +102,8 @@ def main():
     # Start recieving IQ samples
     rxThread.start()
     
-    
-
+    # Create a while loop to continually monitor when the buffer is filled.
+    # When it is filled create a new thread to do the processing.
     while(1):
 
         if len(sampleBuffer)>0:
@@ -110,8 +114,6 @@ def main():
             threadLock.release()
             procThread = demodulation(1, samplesToProcess)
             procThread.start()
-
-
 
     print "Exiting Main Thread"
 
