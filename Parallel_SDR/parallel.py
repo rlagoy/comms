@@ -15,9 +15,6 @@ import pylab
 import numpy
 
 
-
-
-
 def main():
 	sdr = RtlSdr()
 	print ' '
@@ -58,9 +55,6 @@ def main():
 			else:
 				binData.append(0)
 				print(1)
-
-
-
 
 
 	print 'Creating IQ.csv...' + '\n'
