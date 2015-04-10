@@ -2,7 +2,7 @@
 ##################################################
 # Gnuradio Python Flow Graph
 # Title: Comms Signal Viewer
-# Generated: Sat Apr  4 18:15:54 2015
+# Generated: Sun Apr  5 10:34:57 2015
 ##################################################
 
 from PyQt4 import Qt
@@ -71,6 +71,13 @@ class SignalViewer(gr.top_block, Qt.QWidget):
         self._samp_rate_line_edit.returnPressed.connect(
         	lambda: self.set_samp_rate(eng_notation.str_to_num(self._samp_rate_line_edit.text().toAscii())))
         self.top_grid_layout.addWidget(self._samp_rate_tool_bar, 4,1,1,2)
+        _recordBool_check_box = Qt.QCheckBox("Don't Record IQ")
+        self._recordBool_choices = {True: True, False: False}
+        self._recordBool_choices_inv = dict((v,k) for k,v in self._recordBool_choices.iteritems())
+        self._recordBool_callback = lambda i: Qt.QMetaObject.invokeMethod(_recordBool_check_box, "setChecked", Qt.Q_ARG("bool", self._recordBool_choices_inv[i]))
+        self._recordBool_callback(self.recordBool)
+        _recordBool_check_box.stateChanged.connect(lambda i: self.set_recordBool(self._recordBool_choices[bool(i)]))
+        self.top_grid_layout.addWidget(_recordBool_check_box, 6,4,1,1)
         self.main_tab = Qt.QTabWidget()
         self.main_tab_widget_0 = Qt.QWidget()
         self.main_tab_layout_0 = Qt.QBoxLayout(Qt.QBoxLayout.TopToBottom, self.main_tab_widget_0)
@@ -100,13 +107,7 @@ class SignalViewer(gr.top_block, Qt.QWidget):
         self._freq_counter.valueChanged.connect(self.set_freq)
         self.top_grid_layout.addLayout(self._freq_layout, 4,3,1,3)
         self.volumeBlock = blocks.multiply_const_vff((100, ))
-        _recordBool_check_box = Qt.QCheckBox("Don't Record IQ")
-        self._recordBool_choices = {True: True, False: False}
-        self._recordBool_choices_inv = dict((v,k) for k,v in self._recordBool_choices.iteritems())
-        self._recordBool_callback = lambda i: Qt.QMetaObject.invokeMethod(_recordBool_check_box, "setChecked", Qt.Q_ARG("bool", self._recordBool_choices_inv[i]))
-        self._recordBool_callback(self.recordBool)
-        _recordBool_check_box.stateChanged.connect(lambda i: self.set_recordBool(self._recordBool_choices[bool(i)]))
-        self.top_grid_layout.addWidget(_recordBool_check_box, 6,4,1,1)
+        self.recordIQ = grc_blks2.valve(item_size=gr.sizeof_gr_complex*1, open=bool(recordBool))
         self.rational_resampler_xxx_0_0_0 = filter.rational_resampler_fff(
                 interpolation=48,
                 decimation=50,
@@ -123,7 +124,7 @@ class SignalViewer(gr.top_block, Qt.QWidget):
         	1024*4, #size
         	firdes.WIN_BLACKMAN_hARRIS, #wintype
         	freq, #fc
-        	samp_rate, #bw
+        	1e6/4, #bw
         	"", #name
                 1 #number of inputs
         )
@@ -231,7 +232,7 @@ class SignalViewer(gr.top_block, Qt.QWidget):
         	1024*4, #size
         	firdes.WIN_BLACKMAN_hARRIS, #wintype
         	freq, #fc
-        	samp_rate, #bw
+        	1e6/4, #bw
         	"", #name
         	1 #number of inputs
         )
@@ -310,6 +311,8 @@ class SignalViewer(gr.top_block, Qt.QWidget):
         	quad_rate=500e3,
         	audio_decimation=10,
         )
+        self.IQData = blocks.file_sink(gr.sizeof_gr_complex*1, "/Users/ryanlagoy/Documents/Repositories/comms/HackRF/GNURadio/IQData.bin", False)
+        self.IQData.set_unbuffered(False)
 
         ##################################################
         # Connections
@@ -324,8 +327,10 @@ class SignalViewer(gr.top_block, Qt.QWidget):
         self.connect((self.osmosdr_source_0, 0), (self.qtgui_freq_sink_x_0, 0))    
         self.connect((self.osmosdr_source_0, 0), (self.qtgui_time_sink_x_0, 0))    
         self.connect((self.osmosdr_source_0, 0), (self.qtgui_waterfall_sink_x_0, 0))    
+        self.connect((self.osmosdr_source_0, 0), (self.recordIQ, 0))    
         self.connect((self.rational_resampler_xxx_0_0, 0), (self.low_pass_filter_0_0, 0))    
         self.connect((self.rational_resampler_xxx_0_0_0, 0), (self.volumeBlock, 0))    
+        self.connect((self.recordIQ, 0), (self.IQData, 0))    
         self.connect((self.volumeBlock, 0), (self.audio_sink_0, 0))    
 
     def closeEvent(self, event):
@@ -342,8 +347,6 @@ class SignalViewer(gr.top_block, Qt.QWidget):
         self.qtgui_time_sink_x_0.set_samp_rate(self.samp_rate)
         self.osmosdr_source_0.set_sample_rate(self.samp_rate)
         Qt.QMetaObject.invokeMethod(self._samp_rate_line_edit, "setText", Qt.Q_ARG("QString", eng_notation.num_to_str(self.samp_rate)))
-        self.qtgui_waterfall_sink_x_0.set_frequency_range(self.freq, self.samp_rate)
-        self.qtgui_freq_sink_x_0.set_frequency_range(self.freq, self.samp_rate)
 
     def get_recordBool(self):
         return self.recordBool
@@ -351,6 +354,7 @@ class SignalViewer(gr.top_block, Qt.QWidget):
     def set_recordBool(self, recordBool):
         self.recordBool = recordBool
         self._recordBool_callback(self.recordBool)
+        self.recordIQ.set_open(bool(self.recordBool))
 
     def get_fskDemodBool(self):
         return self.fskDemodBool
@@ -367,8 +371,8 @@ class SignalViewer(gr.top_block, Qt.QWidget):
         self.freq = freq
         self.osmosdr_source_0.set_center_freq(self.freq, 0)
         Qt.QMetaObject.invokeMethod(self._freq_counter, "setValue", Qt.Q_ARG("double", self.freq))
-        self.qtgui_waterfall_sink_x_0.set_frequency_range(self.freq, self.samp_rate)
-        self.qtgui_freq_sink_x_0.set_frequency_range(self.freq, self.samp_rate)
+        self.qtgui_waterfall_sink_x_0.set_frequency_range(self.freq, 1e6/4)
+        self.qtgui_freq_sink_x_0.set_frequency_range(self.freq, 1e6/4)
 
     def get_fmDemodBool(self):
         return self.fmDemodBool

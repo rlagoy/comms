@@ -2,21 +2,21 @@
 ##################################################
 # Gnuradio Python Flow Graph
 # Title: Comms Signal TXer
-# Generated: Fri Apr  3 08:29:41 2015
+# Generated: Sun Apr  5 12:01:29 2015
 ##################################################
 
 from PyQt4 import Qt
 from PyQt4.QtCore import QObject, pyqtSlot
-from gnuradio import analog
+from gnuradio import blocks
 from gnuradio import eng_notation
 from gnuradio import gr
+from gnuradio import qtgui
 from gnuradio.eng_option import eng_option
 from gnuradio.filter import firdes
 from optparse import OptionParser
 import PyQt4.Qwt5 as Qwt
-import osmosdr
+import sip
 import sys
-import time
 
 from distutils.version import StrictVersion
 class SignalTX(gr.top_block, Qt.QWidget):
@@ -48,39 +48,45 @@ class SignalTX(gr.top_block, Qt.QWidget):
         ##################################################
         # Variables
         ##################################################
-        self.samp_rate = samp_rate = 20e6
-        self.recordBool = recordBool = True
         self.fskDemodBool = fskDemodBool = True
-        self.freq = freq = 100e6
+        self.freq = freq = 915e6
         self.fmDemodBool = fmDemodBool = True
 
         ##################################################
         # Blocks
         ##################################################
-        self._samp_rate_tool_bar = Qt.QToolBar(self)
-        self._samp_rate_tool_bar.addWidget(Qt.QLabel("Sample Rate"+": "))
-        self._samp_rate_line_edit = Qt.QLineEdit(str(self.samp_rate))
-        self._samp_rate_tool_bar.addWidget(self._samp_rate_line_edit)
-        self._samp_rate_line_edit.returnPressed.connect(
-        	lambda: self.set_samp_rate(eng_notation.str_to_num(self._samp_rate_line_edit.text().toAscii())))
-        self.top_grid_layout.addWidget(self._samp_rate_tool_bar, 4,1,1,2)
-        _recordBool_check_box = Qt.QCheckBox("Don't Record IQ")
-        self._recordBool_choices = {True: True, False: False}
-        self._recordBool_choices_inv = dict((v,k) for k,v in self._recordBool_choices.iteritems())
-        self._recordBool_callback = lambda i: Qt.QMetaObject.invokeMethod(_recordBool_check_box, "setChecked", Qt.Q_ARG("bool", self._recordBool_choices_inv[i]))
-        self._recordBool_callback(self.recordBool)
-        _recordBool_check_box.stateChanged.connect(lambda i: self.set_recordBool(self._recordBool_choices[bool(i)]))
-        self.top_grid_layout.addWidget(_recordBool_check_box, 6,4,1,1)
-        self.osmosdr_sink_0 = osmosdr.sink( args="numchan=" + str(1) + " " + "hackrf=0" )
-        self.osmosdr_sink_0.set_sample_rate(915e6*4)
-        self.osmosdr_sink_0.set_center_freq(915e6, 0)
-        self.osmosdr_sink_0.set_freq_corr(0, 0)
-        self.osmosdr_sink_0.set_gain(0, 0)
-        self.osmosdr_sink_0.set_if_gain(0, 0)
-        self.osmosdr_sink_0.set_bb_gain(0, 0)
-        self.osmosdr_sink_0.set_antenna("", 0)
-        self.osmosdr_sink_0.set_bandwidth(0, 0)
-          
+        self.qtgui_waterfall_sink_x_0 = qtgui.waterfall_sink_c(
+        	1024, #size
+        	firdes.WIN_BLACKMAN_hARRIS, #wintype
+        	915e6, #fc
+        	2e6, #bw
+        	"", #name
+                1 #number of inputs
+        )
+        self.qtgui_waterfall_sink_x_0.set_update_time(0.10)
+        self.qtgui_waterfall_sink_x_0.enable_grid(False)
+        
+        if complex == type(float()):
+          self.qtgui_waterfall_sink_x_0.set_plot_pos_half(not True)
+        
+        labels = ["", "", "", "", "",
+                  "", "", "", "", ""]
+        colors = [0, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0]
+        alphas = [1.0, 1.0, 1.0, 1.0, 1.0,
+                  1.0, 1.0, 1.0, 1.0, 1.0]
+        for i in xrange(1):
+            if len(labels[i]) == 0:
+                self.qtgui_waterfall_sink_x_0.set_line_label(i, "Data {0}".format(i))
+            else:
+                self.qtgui_waterfall_sink_x_0.set_line_label(i, labels[i])
+            self.qtgui_waterfall_sink_x_0.set_color_map(i, colors[i])
+            self.qtgui_waterfall_sink_x_0.set_line_alpha(i, alphas[i])
+        
+        self.qtgui_waterfall_sink_x_0.set_intensity_range(-140, 10)
+        
+        self._qtgui_waterfall_sink_x_0_win = sip.wrapinstance(self.qtgui_waterfall_sink_x_0.pyqwidget(), Qt.QWidget)
+        self.top_layout.addWidget(self._qtgui_waterfall_sink_x_0_win)
         _fskDemodBool_check_box = Qt.QCheckBox("Don't FSK Demod")
         self._fskDemodBool_choices = {True: True, False: False}
         self._fskDemodBool_choices_inv = dict((v,k) for k,v in self._fskDemodBool_choices.iteritems())
@@ -97,7 +103,7 @@ class SignalTX(gr.top_block, Qt.QWidget):
             def setValue(self, value):
                 super(Qwt.QwtCounter, self).setValue(value)
         self._freq_counter = qwt_counter_pyslot()
-        self._freq_counter.setRange(10e6, 6e9, 0.5e6)
+        self._freq_counter.setRange(902e6, 928e6, 0.5e6)
         self._freq_counter.setNumButtons(2)
         self._freq_counter.setMinimumWidth(200)
         self._freq_counter.setValue(self.freq)
@@ -111,31 +117,17 @@ class SignalTX(gr.top_block, Qt.QWidget):
         self._fmDemodBool_callback(self.fmDemodBool)
         _fmDemodBool_check_box.stateChanged.connect(lambda i: self.set_fmDemodBool(self._fmDemodBool_choices[bool(i)]))
         self.top_grid_layout.addWidget(_fmDemodBool_check_box, 6,2,1,1)
-        self.analog_sig_source_x_0 = analog.sig_source_c(915e6*4, analog.GR_COS_WAVE, 915e6, 1, 0)
+        self.blocks_file_source_0 = blocks.file_source(gr.sizeof_gr_complex*1, "/Users/ryanlagoy/Documents/Repositories/comms/HackRF/GNURadio/txData.bin", True)
 
         ##################################################
         # Connections
         ##################################################
-        self.connect((self.analog_sig_source_x_0, 0), (self.osmosdr_sink_0, 0))    
+        self.connect((self.blocks_file_source_0, 0), (self.qtgui_waterfall_sink_x_0, 0))    
 
     def closeEvent(self, event):
         self.settings = Qt.QSettings("GNU Radio", "SignalTX")
         self.settings.setValue("geometry", self.saveGeometry())
         event.accept()
-
-    def get_samp_rate(self):
-        return self.samp_rate
-
-    def set_samp_rate(self, samp_rate):
-        self.samp_rate = samp_rate
-        Qt.QMetaObject.invokeMethod(self._samp_rate_line_edit, "setText", Qt.Q_ARG("QString", eng_notation.num_to_str(self.samp_rate)))
-
-    def get_recordBool(self):
-        return self.recordBool
-
-    def set_recordBool(self, recordBool):
-        self.recordBool = recordBool
-        self._recordBool_callback(self.recordBool)
 
     def get_fskDemodBool(self):
         return self.fskDemodBool
