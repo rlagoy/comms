@@ -16,11 +16,11 @@ def main():
 	# Mark Freq
 	f2 = 0.1e6 #Hz
 	# Sample Rate
-	sampleRate = 1e6#Hz
+	sampleRate = 3e6#Hz
 	# Baud Rate
 	baud=2.0 #sps
 	# Number of Samples
-	numSamples = 256*256*8
+	numSamples = 3000000
 
 	packet=[1,0]
 
