@@ -14,7 +14,6 @@ import time
 import pylab
 import numpy
 
-
 def main():
 
 	print ' '
